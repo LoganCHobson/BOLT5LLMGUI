@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+        }
+        #chatContainer {
+            width: 80%;
+            max-width: 600px;
+            height: 80%;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: white;
+        }
+        #chatHistory {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ccc;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .message.user {
+            text-align: right;
+        }
+        .message p {
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message.user p {
+            background-color: #007bff;
+            color: white;
+        }
+        .message.bot p {
+            background-color: #f1f1f1;
+            color: black;
+        }
+        #inputContainer {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            gap: 10px;
+            background-color: #f4f4f9;
+        }
+        #promptInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #sendButton {
+            padding: 10px 15px;
+            font-size: 14px;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #sendButton:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="chatContainer">
+        <div id="chatHistory"></div>
+        <div id="inputContainer">
+            <textarea id="promptInput" rows="1" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
+            <button id="sendButton" onclick="sendPrompt()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById("chatHistory");
+
+        function adjustHeight(el) {
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+        }
+
+        async function sendPrompt() {
+            const prompt = document.getElementById("promptInput").value.trim();
+            if (!prompt) return;
+
+            // Display user message in chat history
+            addMessage(prompt, "user");
+
+            // Send request to backend
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.response, "bot");
+                } else {
+                    const errorMessage = await response.text();
+                    addMessage("Error: " + errorMessage, "bot");
+                }
+            } catch (error) {
+                console.error("API request failed:", error);
+                addMessage("Request failed. Please try again.", "bot");
+            }
+        }
+
+        function addMessage(content, sender) {
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${sender}`;
+            const messageContent = document.createElement("p");
+            messageContent.textContent = content;
+            messageDiv.appendChild(messageContent);
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight; // Auto-scroll to bottom
+        }
+    </script>
+</body>
+</html>
