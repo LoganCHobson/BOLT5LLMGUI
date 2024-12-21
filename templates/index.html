@@ -92,22 +92,18 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
     <script>
-        const chatHistory = document.getElementById("chatHistory");
+        const converter = new showdown.Converter();
 
-        function adjustHeight(el) {
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-        }
+        
 
         async function sendPrompt() {
             const prompt = document.getElementById("promptInput").value.trim();
             if (!prompt) return;
 
-            // Display user message in chat history
             addMessage(prompt, "user");
 
-            // Send request to backend
             try {
                 const response = await fetch('/api/generate', {
                     method: 'POST',
@@ -134,10 +130,10 @@
             const messageDiv = document.createElement("div");
             messageDiv.className = `message ${sender}`;
             const messageContent = document.createElement("p");
-            messageContent.textContent = content;
+            messageContent.innerHTML = converter.makeHtml(content);
             messageDiv.appendChild(messageContent);
             chatHistory.appendChild(messageDiv);
-            chatHistory.scrollTop = chatHistory.scrollHeight; // Auto-scroll to bottom
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
     </script>
 </body>
