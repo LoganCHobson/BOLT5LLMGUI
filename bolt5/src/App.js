@@ -10,6 +10,7 @@ function App() {
     const [conversationHistory, setConversationHistory] = useState([]);
     const [prompt, setPrompt] = useState('');
     const [currentConversation, setCurrentConversation] = useState('new_conversation');
+    const [selectedConversation, setSelectedConversation] = useState(null); 
     const [isThinking, setIsThinking] = useState(false);
 
     useEffect(() => {
@@ -19,58 +20,54 @@ function App() {
 
     const handleConversationSelect = (conversationId) => {
         setCurrentConversation(conversationId);
+        setSelectedConversation(conversationId); 
         axios.get(`http://localhost:5000/api/conversation/${conversationId}`)
             .then(response => setConversationHistory(response.data.conversation));
     };
 
     const handleSendPrompt = () => {
-      if (prompt.trim()) {
-          // Add user's message to conversation first
-          setConversationHistory([...conversationHistory, { role: 'user', content: prompt }]);
+        if (prompt.trim()) {
+            setConversationHistory([...conversationHistory, { role: 'user', content: prompt }]);
+            setConversationHistory(prevHistory => [
+                ...prevHistory,
+                { role: 'assistant', content: 'Thinking...' }
+            ]);
+            setPrompt('');
+            setIsThinking(true);
 
-          // Add "thinking" message immediately after the user's message
-          setConversationHistory(prevHistory => [
-              ...prevHistory,
-              { role: 'assistant', content: 'Thinking...' }
-          ]);
-
-          // Clear input field
-          setPrompt('');
-          setIsThinking(true);
-
-          // Send the prompt to the backend
-          axios.post('http://localhost:5000/api/generate', { prompt, conversation_id: currentConversation })
-              .then(response => {
-                  // Update with the AI's response, replacing the "thinking" message
-                  setConversationHistory(prevHistory => [
-                      ...prevHistory.slice(0, prevHistory.length - 1), // Remove the last "thinking..." message
-                      { role: 'assistant', content: response.data.response } // Add the real response
-                  ]);
-                  setIsThinking(false);
-              })
-              .catch(error => {
-                  console.error("Error sending prompt:", error);
-                  setIsThinking(false); // In case of error, stop the "thinking" state
-              });
-      }
-  };
+            axios.post('http://localhost:5000/api/generate', { prompt, conversation_id: currentConversation })
+                .then(response => {
+                    setConversationHistory(prevHistory => [
+                        ...prevHistory.slice(0, prevHistory.length - 1),
+                        { role: 'assistant', content: response.data.response }
+                    ]);
+                    setIsThinking(false);
+                })
+                .catch(error => {
+                    console.error("Error sending prompt:", error);
+                    setIsThinking(false);
+                });
+        }
+    };
 
     const handleNewConversation = () => {
         const newConversationId = `new_conversation_${Date.now()}`;
         setCurrentConversation(newConversationId);
-        setConversationHistory([]); 
-        setConversations([...conversations, newConversationId]); 
+        setSelectedConversation(newConversationId); 
+        setConversationHistory([]);
+        setConversations([...conversations, newConversationId]);
 
         axios.post('http://localhost:5000/api/generate', { prompt: 'Start a new conversation', conversation_id: newConversationId })
             .then(response => {
                 setConversationHistory([{ role: 'assistant', content: response.data.response }]);
             });
     };
+
     const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-          handleSendPrompt();
-      }
-  };
+        if (e.key === 'Enter' && !e.shiftKey) {
+            handleSendPrompt();
+        }
+    };
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
@@ -84,7 +81,14 @@ function App() {
                         <List.Item style={{ padding: '5px' }}>
                             <Button
                                 onClick={() => handleConversationSelect(item)}
-                                style={{ width: '100%', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}
+                                style={{
+                                    width: '100%',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    backgroundColor: selectedConversation === item ? '#bae7ff' : 'white', // Highlight selected
+                                    borderColor: selectedConversation === item ? '#1890ff' : '#d9d9d9',
+                                }}
                             >
                                 {item}
                             </Button>
@@ -101,8 +105,8 @@ function App() {
                         background: '#fff',
                     }}
                 >
-                        <div className="content-wrapper">
-                          <div className="messages-container">
+                    <div className="content-wrapper">
+                        <div className="messages-container">
                             {conversationHistory.map((message, index) => (
                                 <div
                                     key={index}
@@ -117,16 +121,16 @@ function App() {
                             ))}
                         </div>
                         <div className="input-container">
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                            <Input.TextArea
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
-                                rows={3}
-                                placeholder="Type your message..."
-                                onKeyDown={handleKeyDown}
-                            />
-                            <Button type="primary" onClick={handleSendPrompt}>Send</Button>
-                        </Space>
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                                <Input.TextArea
+                                    value={prompt}
+                                    onChange={e => setPrompt(e.target.value)}
+                                    rows={3}
+                                    placeholder="Type your message..."
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <Button type="primary" onClick={handleSendPrompt}>Send</Button>
+                            </Space>
                         </div>
                     </div>
                 </Content>

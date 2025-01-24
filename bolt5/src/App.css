@@ -91,3 +91,14 @@
   color: gray;
   font-style: italic;
 }
+
+.list-item {
+  padding: 5px;
+  cursor: pointer;
+  background-color: #fff; 
+}
+
+.selected-conversation {
+  background-color: #bae7ff !important; 
+  border-color: #1890ff !important;
+}
