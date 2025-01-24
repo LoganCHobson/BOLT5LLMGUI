@@ -1,101 +1,120 @@
-import React, { useState } from 'react';
-import { Layout, Input, Button, Typography, Spin, message } from 'antd';
-import { SendOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Layout, Button, Input, Space, List } from 'antd';
 import axios from 'axios';
+import './App.css';
 
-const { Header, Content } = Layout;
-const { Text } = Typography;
+const { Sider, Content } = Layout;
 
-const ChatApp = () => {
-    const [messages, setMessages] = useState([]);
-    const [userInput, setUserInput] = useState('');
-    const [loading, setLoading] = useState(false);
+function App() {
+    const [conversations, setConversations] = useState([]);
+    const [conversationHistory, setConversationHistory] = useState([]);
+    const [prompt, setPrompt] = useState('');
+    const [currentConversation, setCurrentConversation] = useState('new_conversation');
 
-    const sendPrompt = async () => {
-        if (!userInput.trim()) {
-            message.error('Please type a message');
-            return;
-        }
+    useEffect(() => {
+        // Fetch available conversations
+        axios.get('http://localhost:5000/api/conversations')
+            .then(response => setConversations(response.data.conversations));
+    }, []);
 
-        // Add user's message to chat
-        const newMessages = [...messages, { role: 'user', content: userInput }];
-        setMessages(newMessages);
-        setUserInput('');
-        setLoading(true);
+    const handleConversationSelect = (conversationId) => {
+        setCurrentConversation(conversationId);
+        axios.get(`http://localhost:5000/api/conversation/${conversationId}`)
+            .then(response => setConversationHistory(response.data.conversation));
+    };
 
-        try {
-            // Send request to the backend
-            const response = await axios.post('http://localhost:5000/api/generate', {
-                prompt: userInput
-            });
+    const handleSendPrompt = () => {
+        if (prompt.trim()) {
+            // Add the user's message to the conversation history
+            const updatedConversationHistory = [
+                ...conversationHistory,
+                { role: 'user', content: prompt } // Add the user's message
+            ];
 
-            // Add assistant's response to chat
-            const assistantMessage = response.data.response;
-            setMessages([
-                ...newMessages,
-                { role: 'assistant', content: assistantMessage }
-            ]);
-        } catch (error) {
-            console.error('Error sending prompt:', error);
-            message.error('Error sending prompt, please try again.');
-        } finally {
-            setLoading(false);
+            // Send the prompt to the backend
+            axios.post('http://localhost:5000/api/generate', { prompt, conversation_id: currentConversation })
+                .then(response => {
+                    // Add the AI's response to the conversation history
+                    setConversationHistory([
+                        ...updatedConversationHistory,
+                        { role: 'assistant', content: response.data.response }
+                    ]);
+                    setPrompt(''); // Clear the input field
+                })
+                .catch(error => console.error("Error sending prompt:", error));
         }
     };
 
-    const handleInputChange = (e) => {
-        setUserInput(e.target.value);
+    const handleNewConversation = () => {
+        const newConversationId = `new_conversation_${Date.now()}`;
+        setCurrentConversation(newConversationId);
+        setConversationHistory([]); // Clear current conversation history
+        setConversations([...conversations, newConversationId]); // Add new conversation to the list
+
+        axios.post('http://localhost:5000/api/generate', { prompt: 'Start a new conversation', conversation_id: newConversationId })
+            .then(response => {
+                setConversationHistory([{ role: 'assistant', content: response.data.response }]);
+            });
     };
 
     return (
-        <Layout style={{ height: '100vh' }}>
-            <Header style={{ backgroundColor: '#007bff', color: 'white', textAlign: 'center' }}>
-                <h1>Ollama Chat</h1>
-            </Header>
-            <Content style={{ padding: '20px' }}>
-                <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)' }}>
-                    <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>
-                        {messages.map((msg, index) => (
-                            <div key={index} style={{ textAlign: msg.role === 'user' ? 'right' : 'left', marginBottom: '10px' }}>
-                                <Text
+        <Layout style={{ minHeight: '100vh' }}>
+            <Sider width={200} style={{ backgroundColor: '#f0f2f5' }}>
+                <Button type="primary" block onClick={handleNewConversation}>New Conversation</Button>
+                <List
+                    style={{ marginTop: 20 }}
+                    bordered
+                    dataSource={conversations}
+                    renderItem={item => (
+                        <List.Item style={{ padding: '5px' }}>
+                            <Button
+                                onClick={() => handleConversationSelect(item)}
+                                style={{ width: '100%', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}
+                            >
+                                {item}
+                            </Button>
+                        </List.Item>
+                    )}
+                />
+            </Sider>
+            <Layout style={{ padding: '0 24px 24px' }}>
+                <Content
+                    style={{
+                        padding: 24,
+                        margin: 0,
+                        minHeight: 280,
+                        background: '#fff',
+                    }}
+                >
+                    <div>
+                        <div style={{ height: '300px', overflowY: 'scroll', borderBottom: '1px solid #ccc' }}>
+                            {conversationHistory.map((message, index) => (
+                                <div
+                                    key={index}
+                                    className={`message ${message.role}`}
                                     style={{
-                                        display: 'inline-block',
-                                        padding: '10px',
-                                        borderRadius: '10px',
-                                        maxWidth: '70%',
-                                        wordWrap: 'break-word',
-                                        backgroundColor: msg.role === 'user' ? '#007bff' : '#f1f1f1',
-                                        color: msg.role === 'user' ? 'white' : 'black'
+                                        textAlign: message.role === 'user' ? 'right' : 'left',
+                                        backgroundColor: message.role === 'user' ? '#d1f7d6' : '#f0f0f0',
                                     }}
                                 >
-                                    {msg.content}
-                                </Text>
-                            </div>
-                        ))}
+                                    <p>{message.content}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                            <Input.TextArea
+                                value={prompt}
+                                onChange={e => setPrompt(e.target.value)}
+                                rows={3}
+                                placeholder="Type your message..."
+                            />
+                            <Button type="primary" onClick={handleSendPrompt}>Send</Button>
+                        </Space>
                     </div>
-                    <Input.TextArea
-                        id="promptInput"
-                        rows={1}
-                        placeholder="Type your message..."
-                        value={userInput}
-                        onChange={handleInputChange}
-                        onPressEnter={sendPrompt}
-                        style={{ marginBottom: '10px' }}
-                    />
-                    <Button
-                        id="sendButton"
-                        type="primary"
-                        icon={<SendOutlined />}
-                        onClick={sendPrompt}
-                        loading={loading}
-                        block
-                    >
-                        Send
-                    </Button>
-                </div>
-            </Content>
+                </Content>
+            </Layout>
         </Layout>
     );
-};
+}
 
-export default ChatApp;
+export default App;
