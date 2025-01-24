@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Button, Input, Space, List } from 'antd';
 import axios from 'axios';
 import './App.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const { Sider, Content } = Layout;
 
@@ -86,7 +90,7 @@ function App() {
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
-                                    backgroundColor: selectedConversation === item ? '#bae7ff' : 'white', // Highlight selected
+                                    backgroundColor: selectedConversation === item ? '#bae7ff' : 'white',
                                     borderColor: selectedConversation === item ? '#1890ff' : '#d9d9d9',
                                 }}
                             >
@@ -116,7 +120,7 @@ function App() {
                                         backgroundColor: message.role === 'user' ? '#d1f7d6' : '#f0f0f0',
                                     }}
                                 >
-                                    <p>{message.content}</p>
+                                    <ReactMarkdown children={message.content} remarkPlugins={[remarkGfm]} />
                                 </div>
                             ))}
                         </div>
