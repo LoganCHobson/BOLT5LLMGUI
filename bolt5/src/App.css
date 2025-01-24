@@ -58,7 +58,13 @@
   background-color: #f0f0f0;
   text-align: left;
 }
-
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  margin-bottom: 10px;
+  max-height: calc(100vh - 200px); 
+}
 .ant-btn {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -67,3 +73,21 @@
   text-align: left;
 }
 
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.input-container {
+  padding-top: 10px;
+  padding-bottom: 20px;
+  position: sticky;
+  bottom: 0;
+  background-color: #fff;
+}
+
+.thinking-message {
+  color: gray;
+  font-style: italic;
+}
